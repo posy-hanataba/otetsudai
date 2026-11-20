@@ -1,0 +1,767 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<base target="_top">
+<style>
+  :root {
+    --bg: #fdeef2;
+    --card: #ffffff;
+    --pink: #e8879e;
+    --pink-dark: #c9617c;
+    --pink-soft: #f9d5df;
+    --text: #5a4148;
+    --sub: #9a7f86;
+  }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body { margin: 0; background: var(--bg); color: var(--text);
+    font-family: "Hiragino Maru Gothic ProN", "Hiragino Sans", "Noto Sans JP", sans-serif; }
+  body { padding: 12px 14px 40px; max-width: 520px; margin: 0 auto; }
+  button { font: inherit; color: inherit; cursor: pointer; border: none; background: none; }
+
+  header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
+  h1 { font-size: 18px; margin: 0; }
+  .icon-btn { font-size: 20px; padding: 6px 8px; border-radius: 10px; }
+
+  .tabs { display: flex; gap: 6px; overflow-x: auto; padding-bottom: 4px; margin-bottom: 12px; }
+  .tab { flex: none; padding: 8px 14px; border-radius: 999px; background: var(--card);
+    border: 2px solid transparent; font-size: 15px; }
+  .tab.active { border-color: var(--pink); background: var(--pink-soft); font-weight: bold; }
+  .tab.add { color: var(--pink-dark); font-weight: bold; }
+
+  .card { background: var(--card); border-radius: 18px; padding: 16px; margin-bottom: 12px;
+    box-shadow: 0 2px 8px rgba(200, 120, 140, .12); }
+
+  .total { text-align: center; }
+  .total .label { font-size: 14px; color: var(--sub); }
+  .total .money { font-size: 52px; font-weight: bold; color: var(--pink-dark); line-height: 1.2;
+    display: inline-block; }
+  .total .money small { font-size: 22px; margin-left: 2px; }
+  .total .count { font-size: 13px; color: var(--sub); }
+  .bump { animation: bump .35s ease-out; }
+  @keyframes bump { 0% { transform: scale(1); } 40% { transform: scale(1.15); } 100% { transform: scale(1); } }
+
+  .items { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .item { position: relative; min-height: 64px; padding: 10px; border-radius: 14px;
+    background: var(--pink-soft); font-size: 15px; text-align: center; line-height: 1.35;
+    transition: transform .1s; word-break: break-all; }
+  .item:active { transform: scale(.96); }
+  .item .amt { font-size: 12px; color: var(--pink-dark); margin-top: 3px; }
+  .item .edit-row { display: flex; justify-content: center; gap: 14px; margin-top: 6px; }
+  .item .edit-row span { font-size: 18px; padding: 2px 6px; }
+  .item.add-item { background: transparent; border: 2px dashed var(--pink); color: var(--pink-dark); }
+  .row-links { display: flex; justify-content: flex-end; margin-top: 10px; }
+  .link { color: var(--pink-dark); font-size: 13px; text-decoration: underline; padding: 4px; }
+
+  .pay { display: block; width: 100%; padding: 14px; border-radius: 14px; background: var(--pink);
+    color: #fff; font-size: 17px; font-weight: bold; }
+  .pay:disabled { opacity: .4; }
+  .pay.sub { background: var(--pink-soft); color: var(--pink-dark); margin-top: 8px; font-size: 15px; padding: 10px; }
+  .applied { text-align: center; font-size: 14px; color: var(--pink-dark); margin-bottom: 10px; font-weight: bold; }
+  .meisai { width: 100%; border-collapse: collapse; font-size: 14px; margin-bottom: 12px; }
+  .meisai td { padding: 6px 2px; border-bottom: 1px dashed #efd5dc; }
+  .meisai td.r { text-align: right; white-space: nowrap; }
+  .meisai tr.sum td { border-bottom: none; border-top: 2px solid var(--pink); font-weight: bold; font-size: 16px; color: var(--pink-dark); }
+  .meisai .msg { display: block; font-size: 12px; color: var(--sub); }
+  .meisai-title { text-align: center; font-weight: bold; margin-bottom: 6px; letter-spacing: .1em; }
+  .bonus-link { display: inline-block; margin-top: 8px; font-size: 14px; color: var(--pink-dark);
+    border: 1.5px solid var(--pink); border-radius: 999px; padding: 5px 14px; }
+  .bonus-note { margin-top: 10px; background: #fff6d9; border-radius: 12px; padding: 8px 10px; font-size: 14px; }
+  .item:disabled { opacity: .45; }
+  .stamp-row { display: flex; justify-content: flex-end; align-items: center; gap: 10px; margin: -4px 4px 10px 0; }
+  .stamp-row .stamp-label { font-size: 12px; color: #c94a4a; text-align: right; line-height: 1.5; }
+  .hanko { width: 76px; height: 76px; flex: none; border: 3px solid #d64545; border-radius: 50%; color: #d64545;
+    display: flex; align-items: center; justify-content: center; overflow: hidden;
+    font-family: "Hiragino Mincho ProN", "Yu Mincho", "Noto Serif JP", serif; font-weight: bold;
+    writing-mode: vertical-rl; line-height: 1.05; letter-spacing: .02em;
+    transform: rotate(-8deg); opacity: .9; }
+  .hanko.in { animation: stampIn .5s cubic-bezier(.3, 1.6, .5, 1) both; }
+  @keyframes stampIn {
+    0% { transform: scale(2.4) rotate(-8deg); opacity: 0; }
+    70% { transform: scale(.94) rotate(-8deg); opacity: .95; }
+    100% { transform: scale(1) rotate(-8deg); opacity: .9; }
+  }
+  @media (prefers-reduced-motion: reduce) { .hanko.in { animation: none; } }
+  .line-btn { display: block; text-align: center; text-decoration: none; padding: 12px; border-radius: 14px;
+    background: #06c755; color: #fff; font-weight: bold; font-size: 16px; margin-bottom: 8px; }
+  .copy-msg { display: block; width: 100%; text-align: center; font-size: 13px; color: var(--pink-dark);
+    text-decoration: underline; padding: 4px 0 10px; }
+
+  details { font-size: 14px; }
+  summary { cursor: pointer; color: var(--sub); padding: 4px 0; }
+  ul.list { list-style: none; margin: 8px 0 0; padding: 0; }
+  ul.list li { display: flex; justify-content: space-between; align-items: center;
+    padding: 6px 0; border-bottom: 1px solid #f3e3e7; }
+  ul.list li .x { color: var(--sub); font-size: 13px; padding: 4px 8px; border: 1px solid #e9d3d9; border-radius: 8px; }
+  .muted { color: var(--sub); font-size: 12px; }
+  .foot { text-align: center; margin-top: 18px; }
+
+  .hint { text-align: center; margin: -4px 0 10px; }
+  .notice { background: #fff7e6; border-radius: 12px; padding: 10px 12px; font-size: 13px; margin-bottom: 12px; }
+
+  /* 花 */
+  .flower { position: fixed; pointer-events: none; font-size: 28px; z-index: 50;
+    animation: bloom 1.1s ease-out forwards; }
+  @keyframes bloom {
+    0% { opacity: 0; transform: translate(-50%, -50%) scale(.3); }
+    25% { opacity: 1; transform: translate(-50%, -70%) scale(1.2); }
+    100% { opacity: 0; transform: translate(-50%, -140%) scale(1); }
+  }
+
+  /* トースト */
+  .toast { position: fixed; left: 50%; bottom: 20px; transform: translateX(-50%) translateY(20px);
+    background: #fff; border-radius: 14px; padding: 12px 16px; box-shadow: 0 4px 16px rgba(150, 80, 100, .25);
+    display: flex; gap: 14px; align-items: center; opacity: 0; transition: opacity .2s, transform .2s;
+    z-index: 60; width: max-content; max-width: 92%; font-size: 15px; }
+  .toast span { white-space: nowrap; }
+  .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+  .toast button { color: var(--pink-dark); font-weight: bold; text-decoration: underline; flex: none; }
+
+  /* ダイアログ */
+  .overlay { position: fixed; inset: 0; background: rgba(90, 60, 70, .35); display: flex;
+    align-items: center; justify-content: center; z-index: 70; padding: 16px; }
+  .dialog { background: #fff; border-radius: 18px; padding: 18px; width: 100%; max-width: 420px;
+    max-height: 90vh; overflow-y: auto; }
+  .dialog h2 { font-size: 17px; margin: 0 0 10px; }
+  .dialog p { font-size: 14px; margin: 0 0 12px; line-height: 1.6; white-space: pre-line; }
+  .dialog input, .dialog textarea { width: 100%; font: inherit; font-size: 16px; padding: 10px;
+    border: 2px solid var(--pink-soft); border-radius: 10px; margin-bottom: 12px; color: var(--text); }
+  .dialog textarea { height: 110px; font-size: 12px; }
+  .dialog .field-label { font-size: 13px; color: var(--sub); margin-bottom: 4px; }
+  .dialog .btns { display: flex; gap: 10px; justify-content: flex-end; }
+  .btn { padding: 10px 16px; border-radius: 12px; background: var(--pink-soft); }
+  .btn.primary { background: var(--pink); color: #fff; font-weight: bold; }
+  .set-section { border-top: 1px solid #f3e3e7; padding-top: 12px; margin-top: 12px; }
+  .set-section h3 { font-size: 14px; margin: 0 0 8px; }
+  .person-row { display: flex; justify-content: space-between; align-items: center; padding: 6px 0; font-size: 15px; }
+  .person-row .acts { display: flex; gap: 6px; }
+  .small-btn { font-size: 13px; padding: 6px 10px; border-radius: 10px; background: var(--pink-soft); }
+
+  @media (prefers-reduced-motion: reduce) {
+    .bump, .flower { animation: none !important; }
+    .flower { display: none; }
+    .toast { transition: none; }
+  }
+</style>
+</head>
+<body>
+  <header>
+    <h1>おてつだい貯金🌷</h1>
+    <button class="icon-btn" id="btnSettings" aria-label="設定">⚙️</button>
+  </header>
+  <div id="notice"></div>
+  <nav class="tabs" id="tabs"></nav>
+  <main id="main"></main>
+  <div class="foot muted">記録は、このスマホの中だけに保存されます。</div>
+  <div class="toast" id="toast"><span id="toastMsg"></span><button id="toastUndo">取り消す</button></div>
+
+<script>
+(function () {
+  'use strict';
+
+  var KEY = 'otetsudai_v1';
+  var storageOK = true;
+  var state;
+  var editMode = false;
+  var toastTimer = null;
+  var lastEntry = null; // { personId, entryId }
+
+  var THANKS_CHILD = ['ありがとう！たすかったよ', 'ありがとう🌷', 'えらい！ありがとう', 'おかげで、たすかった！', 'ありがとう、うれしいな'];
+  var THANKS_MOM = ['おつかれさま🌷', 'えらい！', '自分にも、ありがとう', 'ちゃんとがんばってるね', 'ひとつ、拍手👏'];
+
+  // ───── 保存 ─────
+  function uid() { return Date.now().toString(36) + Math.random().toString(36).slice(2, 7); }
+  function mkItems(names) { return names.map(function (n) { return { id: uid(), name: n }; }); }
+  function mkPerson(name, type, items) {
+    return { id: uid(), name: name, type: type, items: mkItems(items), entries: [], history: [] };
+  }
+  function defaultState() {
+    var child = mkPerson('子ども', 'child', ['お皿を下げる', '洗濯物をたたむ', 'くつをそろえる']);
+    var mom = mkPerson('お母さん', 'mom', ['ひと息ついた', 'ごはんを作った', '自分をほめた', '拍手ツールに一言書いた🌷']);
+    return { version: 1, unit: 100, people: [child, mom], activeId: child.id };
+  }
+  function testStorage() {
+    try { localStorage.setItem('__t', '1'); localStorage.removeItem('__t'); return true; }
+    catch (e) { return false; }
+  }
+  function load() {
+    if (!storageOK) return null;
+    try { var s = localStorage.getItem(KEY); return s ? JSON.parse(s) : null; }
+    catch (e) { return null; }
+  }
+  function save() {
+    if (!storageOK) return;
+    try { localStorage.setItem(KEY, JSON.stringify(state)); }
+    catch (e) { storageOK = false; showNotice(); }
+  }
+  function showNotice() {
+    var el = document.getElementById('notice');
+    el.innerHTML = '';
+    if (storageOK) return;
+    var d = document.createElement('div');
+    d.className = 'notice';
+    d.textContent = 'このブラウザでは、記録をとっておけないようです。画面を閉じると消えてしまうので、ときどき「⚙️ → バックアップをコピー」でとっておいてくださいね。';
+    el.appendChild(d);
+  }
+
+  // ───── 小物 ─────
+  function el(tag, cls, text) {
+    var e = document.createElement(tag);
+    if (cls) e.className = cls;
+    if (text != null) e.textContent = text;
+    return e;
+  }
+  function yen(n) { return Number(n || 0).toLocaleString('ja-JP'); }
+  function person() {
+    var p = state.people.filter(function (x) { return x.id === state.activeId; })[0];
+    if (!p) { p = state.people[0]; state.activeId = p.id; }
+    return p;
+  }
+  function itemAmount(it) {
+    return (it.amount === undefined || it.amount === null || it.amount === '') ? (Number(state.unit) || 0) : Number(it.amount);
+  }
+  function askItem(title, name, amount) {
+    return dialog({ title: title, ok: 'きめる', fields: [
+      { label: 'おてつだいの名前', value: name, placeholder: '例：お風呂そうじ' },
+      { label: '金額（円）', type: 'number', value: amount }
+    ] }).then(function (v) {
+      if (!v) return null;
+      var n = v[0].trim();
+      if (!n) return null;
+      var a = parseInt(v[1], 10);
+      return { name: n, amount: isNaN(a) || a < 0 ? Number(state.unit) || 0 : a };
+    });
+  }
+  function meisaiLines(p) {
+    var map = {}, order = [], bonus = [];
+    p.entries.forEach(function (e) {
+      if (e.bonus) { bonus.push(e); return; }
+      var k = e.name + '|' + e.amount;
+      if (!map[k]) { map[k] = { name: e.name, amount: e.amount, count: 0 }; order.push(k); }
+      map[k].count++;
+    });
+    var lines = order.map(function (k) {
+      var m = map[k];
+      return { label: m.name + ' × ' + m.count + '回', sum: m.amount * m.count };
+    });
+    bonus.forEach(function (b) { lines.push({ label: '🎁 ボーナス', msg: b.msg || '', sum: b.amount }); });
+    return lines;
+  }
+  function buildMeisai(title, lines, sum) {
+    var wrap = el('div');
+    wrap.appendChild(el('div', 'meisai-title', title));
+    var t = el('table', 'meisai');
+    lines.forEach(function (l) {
+      var tr = el('tr');
+      var td1 = el('td', '', l.label);
+      if (l.msg) td1.appendChild(el('span', 'msg', '「' + l.msg + '」'));
+      tr.appendChild(td1);
+      tr.appendChild(el('td', 'r', yen(l.sum) + '円'));
+      t.appendChild(tr);
+    });
+    var sr = el('tr', 'sum');
+    sr.appendChild(el('td', '', 'ごうけい'));
+    sr.appendChild(el('td', 'r', yen(sum) + '円'));
+    t.appendChild(sr);
+    wrap.appendChild(t);
+    return wrap;
+  }
+  function meisaiTitle(p) { return p.type === 'mom' ? 'ごほうび明細' : 'おこづかい明細'; }
+  function meisaiTable(p) { return buildMeisai(meisaiTitle(p), meisaiLines(p), total(p)); }
+  function hanko(name, at, animate) {
+    var row = el('div', 'stamp-row');
+    var lab = el('div', 'stamp-label');
+    lab.appendChild(el('div', '', '受領'));
+    lab.appendChild(el('div', '', fmtDate(at)));
+    row.appendChild(lab);
+    var n = String(name || '').replace(/\s/g, '');
+    var len = Array.from(n).length;
+    var h = el('div', 'hanko' + (animate ? ' in' : ''), n);
+    h.style.fontSize = (len <= 1 ? 32 : len === 2 ? 26 : len === 3 ? 20 : len === 4 ? 16 : len <= 6 ? 13 : 11) + 'px';
+    row.appendChild(h);
+    return row;
+  }
+
+  function applyMessage(p) {
+    var lines = meisaiLines(p).map(function (l) { return '・' + l.label + '　' + yen(l.sum) + '円'; });
+    return p.name + 'より📝\nおこづかい申請しました！\n\n' + lines.join('\n') +
+      '\n\nごうけい ' + yen(total(p)) + '円\n承認お願いします🌷';
+  }
+  function copyText(text, btn, doneLabel) {
+    var ta = el('textarea'); ta.value = text; ta.readOnly = true;
+    ta.style.position = 'fixed'; ta.style.top = '0'; ta.style.left = '0'; ta.style.opacity = '0';
+    document.body.appendChild(ta);
+    ta.focus(); ta.select(); ta.setSelectionRange(0, text.length);
+    var ok = false;
+    try { ok = document.execCommand('copy'); } catch (e) { ok = false; }
+    document.body.removeChild(ta);
+    if (ok) { btn.textContent = doneLabel; return; }
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(text).then(function () { btn.textContent = doneLabel; }, function () { showManual(text); });
+    } else { showManual(text); }
+  }
+  function showManual(text) {
+    var t = el('textarea'); t.value = text; t.readOnly = true;
+    dialog({ title: 'コピーしてね', node: t, text: '自動でコピーできなかったので、上の文字を長押しして「すべてを選択」→「コピー」してください。', ok: 'とじる', cancel: false });
+    setTimeout(function () { t.focus(); t.select(); }, 100);
+  }
+  function total(p) { return p.entries.reduce(function (s, e) { return s + e.amount; }, 0); }
+  function fmtDate(t) { var d = new Date(t); return (d.getMonth() + 1) + '/' + d.getDate(); }
+  function fmtMonth(t) { var d = new Date(t); return d.getFullYear() + '年' + (d.getMonth() + 1) + '月'; }
+  function pick(a) { return a[Math.floor(Math.random() * a.length)]; }
+
+  // ───── ダイアログ ─────
+  function dialog(opt) {
+    return new Promise(function (resolve) {
+      var ov = el('div', 'overlay');
+      var dg = el('div', 'dialog');
+      if (opt.title) dg.appendChild(el('h2', '', opt.title));
+      if (opt.node) dg.appendChild(opt.node);
+      if (opt.text) dg.appendChild(el('p', '', opt.text));
+      var fields = [];
+      (opt.fields || []).forEach(function (f) {
+        dg.appendChild(el('div', 'field-label', f.label));
+        var fi = el('input');
+        if (f.type === 'number') { fi.type = 'number'; fi.inputMode = 'numeric'; }
+        fi.value = f.value == null ? '' : f.value;
+        if (f.placeholder) fi.placeholder = f.placeholder;
+        dg.appendChild(fi);
+        fields.push(fi);
+      });
+      var input = null;
+      if (opt.input) {
+        input = el(opt.input === 'textarea' ? 'textarea' : 'input');
+        if (opt.input === 'number') { input.type = 'number'; input.inputMode = 'numeric'; }
+        input.value = opt.value || '';
+        if (opt.placeholder) input.placeholder = opt.placeholder;
+        dg.appendChild(input);
+      }
+      var btns = el('div', 'btns');
+      var cancel = el('button', 'btn', opt.cancel || 'やめる');
+      var ok = el('button', 'btn primary', opt.ok || 'OK');
+      if (opt.cancel !== false) btns.appendChild(cancel);
+      btns.appendChild(ok);
+      dg.appendChild(btns);
+      ov.appendChild(dg);
+      document.body.appendChild(ov);
+      var first = input || fields[0];
+      if (first) setTimeout(function () { first.focus(); }, 50);
+      function close(v) { document.body.removeChild(ov); resolve(v); }
+      cancel.onclick = function () { close(null); };
+      ok.onclick = function () {
+        if (fields.length) close(fields.map(function (f) { return f.value; }));
+        else close(input ? input.value : true);
+      };
+      ov.onclick = function (e) { if (e.target === ov) close(null); };
+    });
+  }
+  function askText(title, value, placeholder) {
+    return dialog({ title: title, input: 'text', value: value, placeholder: placeholder, ok: 'きめる' })
+      .then(function (v) { return v == null ? null : v.trim(); });
+  }
+
+  // ───── 動き ─────
+  function bloom(x, y) {
+    var f = el('div', 'flower', pick(['🌸', '🌷', '🌼', '💮']));
+    f.style.left = x + 'px'; f.style.top = y + 'px';
+    document.body.appendChild(f);
+    setTimeout(function () { if (f.parentNode) f.parentNode.removeChild(f); }, 1200);
+  }
+  function toast(msg, undo) {
+    var t = document.getElementById('toast');
+    document.getElementById('toastMsg').textContent = msg;
+    document.getElementById('toastUndo').style.display = undo ? '' : 'none';
+    t.classList.add('show');
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(function () { t.classList.remove('show'); lastEntry = null; }, 4000);
+  }
+  document.getElementById('toastUndo').onclick = function () {
+    if (!lastEntry) return;
+    var p = state.people.filter(function (x) { return x.id === lastEntry.personId; })[0];
+    if (p) p.entries = p.entries.filter(function (e) { return e.id !== lastEntry.entryId; });
+    lastEntry = null;
+    save(); render();
+    document.getElementById('toast').classList.remove('show');
+  };
+
+  // ───── 操作 ─────
+  function check(p, item, ev) {
+    var entry = { id: uid(), name: item.name, amount: itemAmount(item), at: Date.now() };
+    p.entries.push(entry);
+    save();
+    lastEntry = { personId: p.id, entryId: entry.id };
+    render(true);
+    var r = ev.currentTarget.getBoundingClientRect();
+    bloom(r.left + r.width / 2, r.top + r.height / 2);
+    toast(pick(p.type === 'mom' ? THANKS_MOM : THANKS_CHILD), true);
+  }
+  function addChild() {
+    askText('子どもを足す', '', 'ニックネーム').then(function (name) {
+      if (!name) return;
+      var c = mkPerson(name, 'child', ['お皿を下げる', '洗濯物をたたむ', 'くつをそろえる']);
+      var momIdx = state.people.findIndex(function (x) { return x.type === 'mom'; });
+      if (momIdx < 0) state.people.push(c); else state.people.splice(momIdx, 0, c);
+      state.activeId = c.id;
+      save(); render();
+    });
+  }
+  function addItem(p) {
+    askItem('おてつだいを足す', '', Number(state.unit) || 0).then(function (r) {
+      if (!r) return;
+      p.items.push({ id: uid(), name: r.name, amount: r.amount });
+      save(); render();
+    });
+  }
+  function renameItem(p, item) {
+    askItem('おてつだいを変える', item.name, itemAmount(item)).then(function (r) {
+      if (!r) return;
+      item.name = r.name; item.amount = r.amount; save(); render();
+    });
+  }
+  function renamePerson(p) {
+    askText('名前を変える', p.name, 'ニックネーム').then(function (n) {
+      if (!n) return;
+      p.name = n; save(); render();
+    });
+  }
+  function deleteItem(p, item) {
+    dialog({ title: '項目を消す', text: '「' + item.name + '」を消しますか？\nこれまでのチェックと金額は残ります。', ok: '消す' })
+      .then(function (ok) {
+        if (!ok) return;
+        p.items = p.items.filter(function (x) { return x.id !== item.id; });
+        save(); render();
+      });
+  }
+  function removeEntry(p, entry) {
+    dialog({ title: 'チェックを取り消す', text: fmtDate(entry.at) + '「' + entry.name + '」' + yen(entry.amount) + '円 を取り消しますか？', ok: '取り消す' })
+      .then(function (ok) {
+        if (!ok) return;
+        p.entries = p.entries.filter(function (x) { return x.id !== entry.id; });
+        save(); render();
+      });
+  }
+  function apply(p) {
+    var mom = p.type === 'mom';
+    dialog({ title: mom ? 'ごほうび申請' : 'おこづかい申請', node: meisaiTable(p),
+      text: 'この内容で申請しますか？', ok: '申請する' })
+      .then(function (ok) {
+        if (!ok) return;
+        p.applied = { at: Date.now() };
+        save(); render();
+        toast(mom ? '申請しました。自分で承認してね🌷' : '申請しました！LINEで送ってね', false);
+      });
+  }
+  function reject(p) {
+    dialog({ title: '差しもどし', text: '申請を取り下げて、チェックできる状態にもどしますか？\n金額はそのまま残ります。', ok: '差しもどす' })
+      .then(function (ok) {
+        if (!ok) return;
+        delete p.applied;
+        save(); render();
+      });
+  }
+  function receive(p) {
+    var sum = total(p);
+    var mom = p.type === 'mom';
+    dialog({ title: '受領', text: yen(sum) + '円、' + (mom ? 'ごほうびにしましたか？' : '受け取りましたか？') + '\n受領のハンコを押して、合計を0にもどします。',
+      ok: '受け取った！' })
+      .then(function (ok) {
+        if (!ok) return;
+        var now = Date.now();
+        var lines = meisaiLines(p);
+        p.history.unshift({ id: uid(), total: sum, count: p.entries.filter(function (e) { return !e.bonus; }).length,
+          lines: lines, title: meisaiTitle(p), appliedAt: p.applied ? p.applied.at : null,
+          paidAt: now, stampName: p.name });
+        p.entries = [];
+        delete p.applied;
+        save(); render();
+        document.getElementById('toast').classList.remove('show');
+        var node = el('div');
+        node.appendChild(buildMeisai(meisaiTitle(p), lines, sum));
+        node.appendChild(hanko(p.name, now, true));
+        dialog({ title: mom ? 'すてきなごほうびを🌷' : 'おつかれさまでした！', node: node,
+          text: mom ? '' : '今月の働き、ありがとう🌷', ok: 'とじる', cancel: false });
+      });
+  }
+  function giveBonus(p) {
+    dialog({ title: '🎁 ボーナスを贈る', ok: '贈る', fields: [
+      { label: '金額（円）', type: 'number', value: 100 },
+      { label: 'ひとこと（なくてもOK）', placeholder: '例：いつもありがとう' }
+    ] }).then(function (v) {
+      if (!v) return;
+      var a = parseInt(v[0], 10);
+      if (isNaN(a) || a <= 0) return;
+      p.entries.push({ id: uid(), name: 'ボーナス', amount: a, at: Date.now(), bonus: true, msg: v[1].trim() });
+      save(); render(true);
+      var r = document.querySelector('.money').getBoundingClientRect();
+      bloom(r.left + r.width / 2, r.top + r.height / 2);
+      toast('🎁 ボーナスを贈りました', false);
+    });
+  }
+
+  // ───── 設定 ─────
+  function openSettings() {
+    var ov = el('div', 'overlay');
+    var dg = el('div', 'dialog');
+    dg.appendChild(el('h2', '', '設定'));
+
+    // 金額
+    var s1 = el('div');
+    s1.appendChild(el('h3', '', 'はじめの金額（新しく足す項目の金額）'));
+    var unit = el('input'); unit.type = 'number'; unit.inputMode = 'numeric'; unit.value = state.unit;
+    s1.appendChild(unit);
+    dg.appendChild(s1);
+
+    // 人
+    var s2 = el('div', 'set-section');
+    s2.appendChild(el('h3', '', '人'));
+    state.people.forEach(function (p) {
+      var row = el('div', 'person-row');
+      row.appendChild(el('span', '', (p.type === 'mom' ? '🌷 ' : '') + p.name));
+      var acts = el('div', 'acts');
+      var rn = el('button', 'small-btn', '名前');
+      rn.onclick = function () {
+        closeSettings();
+        askText('名前を変える', p.name).then(function (n) { if (n) { p.name = n; save(); } render(); openSettings(); });
+      };
+      acts.appendChild(rn);
+      if (p.type !== 'mom') {
+        var del = el('button', 'small-btn', '消す');
+        del.onclick = function () {
+          closeSettings();
+          dialog({ title: p.name + 'を消す', text: p.name + 'の記録（今の合計と履歴）もすべて消えます。よろしいですか？', ok: '消す' })
+            .then(function (ok) {
+              if (ok) {
+                if (state.people.filter(function (x) { return x.type === 'child'; }).length <= 1 && p.type === 'child') {
+                  // 最後の子どもも消せる（お母さんの欄だけになる）
+                }
+                state.people = state.people.filter(function (x) { return x.id !== p.id; });
+                if (state.activeId === p.id) state.activeId = state.people[0].id;
+                save();
+              }
+              render(); openSettings();
+            });
+        };
+        acts.appendChild(del);
+      }
+      row.appendChild(acts);
+      s2.appendChild(row);
+    });
+    var addC = el('button', 'small-btn', '＋ 子どもを足す（タブレットなどで、きょうだい一緒に使うとき）');
+    addC.style.marginTop = '8px';
+    addC.onclick = function () { closeSettings(); addChild(); };
+    s2.appendChild(addC);
+    dg.appendChild(s2);
+
+    // 引っ越し（バックアップ）
+    var s3 = el('div', 'set-section');
+    s3.appendChild(el('h3', '', 'スマホを変えるとき'));
+    s3.appendChild(el('p', 'muted', '①古いスマホで「バックアップをコピー」→ LINEのKeepメモなどに貼っておく　②新しいスマホで「バックアップから戻す」に貼りつける'));
+    var copyBtn = el('button', 'small-btn', '📋 バックアップをコピー');
+    copyBtn.onclick = function () { copyText(JSON.stringify(state), copyBtn, 'コピーしました。メモに貼っておいてね'); };
+    s3.appendChild(copyBtn);
+
+    var det = el('details');
+    det.style.marginTop = '10px';
+    det.appendChild(el('summary', '', 'バックアップから戻す'));
+    det.appendChild(el('p', 'muted', 'コピーしておいたバックアップを貼りつけて「戻す」。今の記録は置きかわります。'));
+    var inp = el('textarea'); inp.placeholder = 'ここに貼りつけ';
+    det.appendChild(inp);
+    var loadBtn = el('button', 'small-btn', '戻す');
+    loadBtn.onclick = function () {
+      var data;
+      try { data = JSON.parse(inp.value); } catch (e) { data = null; }
+      if (!data || !Array.isArray(data.people) || !data.people.length) {
+        loadBtn.textContent = 'うまく読めませんでした。全部コピーできているか見てみてね';
+        return;
+      }
+      closeSettings();
+      dialog({ title: 'バックアップから戻す', text: '今の記録を、貼りつけたバックアップに置きかえます。よろしいですか？', ok: '戻す' })
+        .then(function (ok) {
+          if (ok) { state = data; if (!state.unit) state.unit = 100; save(); toast('戻しました🌷', false); }
+          render();
+        });
+    };
+    det.appendChild(loadBtn);
+    s3.appendChild(det);
+    dg.appendChild(s3);
+
+    var btns = el('div', 'btns'); btns.style.marginTop = '16px';
+    var close = el('button', 'btn primary', 'とじる');
+    btns.appendChild(close);
+    dg.appendChild(btns);
+    ov.appendChild(dg);
+    document.body.appendChild(ov);
+
+    function closeSettings() {
+      var v = parseInt(unit.value, 10);
+      if (!isNaN(v) && v >= 0) state.unit = v;
+      save();
+      if (ov.parentNode) ov.parentNode.removeChild(ov);
+    }
+    close.onclick = function () { closeSettings(); render(); };
+    ov.onclick = function (e) { if (e.target === ov) { closeSettings(); render(); } };
+  }
+  document.getElementById('btnSettings').onclick = openSettings;
+
+  // ───── 画面 ─────
+  function render(bump) {
+    var p = person();
+
+    // タブ
+    var tabs = document.getElementById('tabs');
+    tabs.innerHTML = '';
+    state.people.forEach(function (x) {
+      var b = el('button', 'tab' + (x.id === p.id ? ' active' : ''), (x.type === 'mom' ? '🌷 ' : '') + x.name);
+      b.onclick = function () {
+        if (x.id === state.activeId) { renamePerson(x); return; }
+        state.activeId = x.id; editMode = false; save(); render();
+      };
+      tabs.appendChild(b);
+    });
+
+    var main = document.getElementById('main');
+    main.innerHTML = '';
+    if (p.name === '子ども') {
+      main.appendChild(el('div', 'hint muted', '「子ども」のタブをもう一度タップすると、名前を変えられます'));
+    }
+
+    // 合計
+    var sum = total(p);
+    var c1 = el('section', 'card total');
+    c1.appendChild(el('div', 'label', p.name + 'の たまったお金'));
+    var money = el('div', 'money');
+    money.appendChild(document.createTextNode(yen(sum)));
+    money.appendChild(el('small', '', '円'));
+    c1.appendChild(money);
+    var nCheck = p.entries.filter(function (e) { return !e.bonus; }).length;
+    c1.appendChild(el('div', 'count', 'チェック ' + nCheck + 'こ'));
+    var bonuses = p.entries.filter(function (e) { return e.bonus; });
+    if (bonuses.length) {
+      var lb = bonuses[bonuses.length - 1];
+      c1.appendChild(el('div', 'bonus-note', '🎁 ボーナスが届いています' + (lb.msg ? '：「' + lb.msg + '」' : '')));
+    }
+    var bl = el('button', 'bonus-link', p.type === 'mom' ? '🎁 自分にボーナス' : '🎁 ボーナスを贈る');
+    bl.onclick = function () { giveBonus(p); };
+    c1.appendChild(bl);
+    main.appendChild(c1);
+    if (bump) { void money.offsetWidth; money.classList.add('bump'); }
+
+    // お手伝い
+    var c2 = el('section', 'card');
+    var grid = el('div', 'items');
+    p.items.forEach(function (it) {
+      var b = el('button', 'item');
+      b.appendChild(el('div', '', it.name));
+      b.appendChild(el('div', 'amt', yen(itemAmount(it)) + '円'));
+      if (editMode) {
+        var er = el('div', 'edit-row');
+        var rn = el('span', '', '✎'); rn.setAttribute('aria-label', '名前と金額を変える');
+        var dl = el('span', '', '🗑'); dl.setAttribute('aria-label', '消す');
+        rn.onclick = function (e) { e.stopPropagation(); renameItem(p, it); };
+        dl.onclick = function (e) { e.stopPropagation(); deleteItem(p, it); };
+        er.appendChild(rn); er.appendChild(dl);
+        b.appendChild(er);
+        b.onclick = function () { renameItem(p, it); };
+      } else if (p.applied) {
+        b.disabled = true;
+      } else {
+        b.onclick = function (e) { check(p, it, e); };
+      }
+      grid.appendChild(b);
+    });
+    var ab = el('button', 'item add-item', '＋ 足す');
+    if (p.applied) ab.disabled = true;
+    ab.onclick = function () { addItem(p); };
+    grid.appendChild(ab);
+    c2.appendChild(grid);
+    var rl = el('div', 'row-links');
+    var et = el('button', 'link', editMode ? '編集をおわる' : '項目を編集');
+    et.onclick = function () { editMode = !editMode; render(); };
+    rl.appendChild(et);
+    c2.appendChild(rl);
+    main.appendChild(c2);
+
+    // 申請・承認
+    var mom = p.type === 'mom';
+    var c3 = el('section', 'card');
+    if (p.applied) {
+      c3.appendChild(el('div', 'applied', '📝 ' + fmtDate(p.applied.at) + ' に申請中'));
+      c3.appendChild(meisaiTable(p));
+      if (!mom) {
+        var msg = applyMessage(p);
+        var line = el('a', 'line-btn', 'LINEで知らせる');
+        line.href = 'https://line.me/R/share?text=' + encodeURIComponent(msg);
+        line.target = '_blank'; line.rel = 'noopener';
+        c3.appendChild(line);
+        var cp = el('button', 'copy-msg', 'LINE以外で送るときは、文をコピー');
+        cp.onclick = function () { copyText(msg, cp, 'コピーしました。メッセージに貼りつけてね'); };
+        c3.appendChild(cp);
+      }
+      var ap = el('button', 'pay', mom ? '受け取った🌷（受領）' : '受け取った！（受領）');
+      ap.onclick = function () { receive(p); };
+      c3.appendChild(ap);
+      var rj = el('button', 'pay sub', '差しもどし');
+      rj.onclick = function () { reject(p); };
+      c3.appendChild(rj);
+    } else {
+      var payBtn = el('button', 'pay', mom ? 'ごほうび申請' : 'おこづかい申請');
+      payBtn.disabled = p.entries.length === 0;
+      payBtn.onclick = function () { apply(p); };
+      c3.appendChild(payBtn);
+    }
+    main.appendChild(c3);
+
+    // 今回のチェック・履歴
+    var c4 = el('section', 'card');
+    var d1 = el('details');
+    d1.appendChild(el('summary', '', '今回のチェック（' + p.entries.length + '）'));
+    d1.open = false;
+    var ul = el('ul', 'list');
+    p.entries.slice().reverse().forEach(function (e) {
+      var li = el('li');
+      li.appendChild(el('span', '', fmtDate(e.at) + '　' + (e.bonus ? '🎁 ' : '') + e.name + '　' + yen(e.amount) + '円'));
+      if (!p.applied) {
+        var x = el('button', 'x', '取り消す');
+        x.onclick = function () { removeEntry(p, e); };
+        li.appendChild(x);
+      }
+      ul.appendChild(li);
+    });
+    if (!p.entries.length) ul.appendChild(el('li', 'muted', 'まだありません'));
+    d1.appendChild(ul);
+    c4.appendChild(d1);
+
+    var d2 = el('details');
+    d2.appendChild(el('summary', '', 'これまでの履歴（' + p.history.length + '）'));
+    var ul2 = el('ul', 'list');
+    p.history.forEach(function (h) {
+      var li = el('li');
+      if (h.lines) {
+        li.style.cursor = 'pointer';
+        li.onclick = function () {
+          var node = el('div');
+          node.appendChild(buildMeisai(h.title || meisaiTitle(p), h.lines, h.total));
+          if (h.stampName) node.appendChild(hanko(h.stampName, h.paidAt, false));
+          dialog({ title: fmtMonth(h.paidAt) + 'の明細', node: node, ok: 'とじる', cancel: false });
+        };
+      }
+      li.appendChild(el('span', '', fmtMonth(h.paidAt) + '（' + fmtDate(h.paidAt) + '）'));
+      li.appendChild(el('span', 'muted', yen(h.total) + '円・' + h.count + 'こ'));
+      ul2.appendChild(li);
+    });
+    if (!p.history.length) ul2.appendChild(el('li', 'muted', 'まだありません'));
+    d2.appendChild(ul2);
+    c4.appendChild(d2);
+    main.appendChild(c4);
+  }
+
+  // ───── はじまり ─────
+  storageOK = testStorage();
+  state = load() || defaultState();
+  save();
+  showNotice();
+  render();
+})();
+</script>
+</body>
+</html>
